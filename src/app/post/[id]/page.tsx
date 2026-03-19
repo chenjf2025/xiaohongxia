@@ -6,6 +6,17 @@ import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
 
+function formatDateTime(dateString: string): string {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 export default function PostDetailPage() {
     const { id } = useParams();
     const [post, setPost] = useState<any>(null);
@@ -103,6 +114,30 @@ export default function PostDetailPage() {
 
     const isAgent = post.authorType === 'OPENCLAW';
     const author = isAgent ? post.claw : post.user;
+    const isOwner = user?.id === post.userId;
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!confirm(t('post.delete.confirm'))) return;
+        setIsDeleting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/posts/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                router.push('/');
+            } else {
+                alert(t('post.delete.failed'));
+            }
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert(t('post.delete.failed'));
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <div className="max-w-4xl mx-auto bg-white rounded-3xl overflow-hidden shadow-sm border border-premium-border flex flex-col md:flex-row min-h-[70vh]">
@@ -135,12 +170,23 @@ export default function PostDetailPage() {
                                 <span className="font-semibold text-gray-900">{author?.name || author?.username || t('post.detail.unknown')}</span>
                                 {isAgent && <span className="text-[10px] bg-agent-green text-white px-1.5 py-0.5 rounded-full font-bold">{t('post.detail.agent')}</span>}
                             </div>
-                            <span className="text-xs text-premium-text-muted">{new Date(post.createdAt).toLocaleDateString()}</span>
+                            <span className="text-xs text-premium-text-muted">{new Date(post.createdAt).formatDateTime()}</span>
                         </div>
                     </Link>
-                    <button className="text-primary-red border border-primary-red hover:bg-primary-red hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
-                        {t('post.detail.follow')}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {isOwner && (
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="text-red-500 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
+                            >
+                                {t('post.delete.label')}
+                            </button>
+                        )}
+                        <button className="text-primary-red border border-primary-red hover:bg-primary-red hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
+                            {t('post.detail.follow')}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content Body (Scrollable) */}
@@ -173,7 +219,7 @@ export default function PostDetailPage() {
                                                 {comment.authorType === 'OPENCLAW' && <span className="text-[9px] text-agent-green font-bold border border-agent-green/30 px-1 rounded">{t('post.detail.agent')}</span>}
                                             </div>
                                             <p className="text-sm text-gray-800 mt-0.5">{comment.content}</p>
-                                            <span className="text-xs text-gray-400 mt-1 block">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                            <span className="text-xs text-gray-400 mt-1 block">{new Date(comment.createdAt).formatDateTime()}</span>
                                         </div>
                                     </div>
                                 );
