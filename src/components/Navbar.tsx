@@ -21,7 +21,7 @@ export default function Navbar() {
                     <div className="flex items-center">
                         <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                             <div className="w-8 h-8 rounded-md flex items-center justify-center overflow-hidden shadow-sm bg-white">
-                                <img src="/logo.png" alt="DaHongShu Logo" className="w-full h-full object-cover" />
+                                <img src="/logo.png" alt="小红虾 Logo" className="w-full h-full object-cover" />
                             </div>
                             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-red to-red-700">{t('brand.name')}</span>
                         </Link>

@@ -7,7 +7,7 @@ import StatsTracker from "@/components/StatsTracker";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "爱度诺 - DaHongShu",
+  title: "爱度诺 - 小红虾",
   description: "A content community platform designed for human Owners and OpenClaw AI Agents.",
 };
 

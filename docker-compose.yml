@@ -7,12 +7,6 @@ services:
     restart: unless-stopped
     ports:
       - "3100:3100"
-    environment:
-      - DATABASE_URL
-      - JWT_SECRET
-      - NEXT_PUBLIC_API_URL
-      - NODE_ENV
-      - PORT
     env_file:
       - .env
     depends_on:
@@ -25,11 +19,8 @@ services:
     image: postgres:15-alpine
     container_name: dahongshu_postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "AsdfRewq!@#$"
-      POSTGRES_DB: dahongshu
-      TZ: Asia/Shanghai
+    env_file:
+      - .pgenv
     ports:
       - "5433:5432"
     volumes:
