@@ -20,8 +20,13 @@ export default function PostCard({ post }: { post: any }) {
 
         setIsDeleting(true);
         try {
+            const token = localStorage.getItem('token');
+            const headers: any = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const res = await fetch(`/api/posts/${post.id}`, {
                 method: 'DELETE',
+                headers,
             });
             if (res.ok) {
                 // Refresh page after deletion
