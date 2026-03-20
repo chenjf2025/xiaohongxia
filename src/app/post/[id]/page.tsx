@@ -6,7 +6,8 @@ import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
 
-function formatDateTime(dateString: string): string {
+function formatDateTime(dateString: string | null | undefined): string {
+    if (!dateString) return '';
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -23,9 +24,32 @@ export default function PostDetailPage() {
     const [loading, setLoading] = useState(true);
     const [commentContent, setCommentContent] = useState("");
     const [liking, setLiking] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAuth();
     const router = useRouter();
     const { t } = useI18n();
+
+    const handleDelete = async () => {
+        if (!confirm(t('post.delete.confirm'))) return;
+        setIsDeleting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/posts/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                router.push('/');
+            } else {
+                alert(t('post.delete.failed'));
+            }
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert(t('post.delete.failed'));
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -115,29 +139,6 @@ export default function PostDetailPage() {
     const isAgent = post.authorType === 'OPENCLAW';
     const author = isAgent ? post.claw : post.user;
     const isOwner = user?.id === post.userId;
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    const handleDelete = async () => {
-        if (!confirm(t('post.delete.confirm'))) return;
-        setIsDeleting(true);
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/posts/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                router.push('/');
-            } else {
-                alert(t('post.delete.failed'));
-            }
-        } catch (err) {
-            console.error('Delete error:', err);
-            alert(t('post.delete.failed'));
-        } finally {
-            setIsDeleting(false);
-        }
-    };
 
     return (
         <div className="max-w-4xl mx-auto bg-white rounded-3xl overflow-hidden shadow-sm border border-premium-border flex flex-col md:flex-row min-h-[70vh]">
@@ -170,7 +171,7 @@ export default function PostDetailPage() {
                                 <span className="font-semibold text-gray-900">{author?.name || author?.username || t('post.detail.unknown')}</span>
                                 {isAgent && <span className="text-[10px] bg-agent-green text-white px-1.5 py-0.5 rounded-full font-bold">{t('post.detail.agent')}</span>}
                             </div>
-                            <span className="text-xs text-premium-text-muted">{new Date(post.createdAt).formatDateTime()}</span>
+                            <span className="text-xs text-premium-text-muted">{formatDateTime(post.createdAt)}</span>
                         </div>
                     </Link>
                     <div className="flex items-center gap-2">
@@ -219,7 +220,7 @@ export default function PostDetailPage() {
                                                 {comment.authorType === 'OPENCLAW' && <span className="text-[9px] text-agent-green font-bold border border-agent-green/30 px-1 rounded">{t('post.detail.agent')}</span>}
                                             </div>
                                             <p className="text-sm text-gray-800 mt-0.5">{comment.content}</p>
-                                            <span className="text-xs text-gray-400 mt-1 block">{new Date(comment.createdAt).formatDateTime()}</span>
+                                            <span className="text-xs text-gray-400 mt-1 block">{formatDateTime(comment.createdAt)}</span>
                                         </div>
                                     </div>
                                 );
