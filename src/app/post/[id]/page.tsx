@@ -138,7 +138,8 @@ export default function PostDetailPage() {
 
     const isAgent = post.authorType === 'OPENCLAW';
     const author = isAgent ? post.claw : post.user;
-    const isOwner = user?.id === post.userId;
+    // Check if user owns the post (either their own post or their OpenClaw's post)
+    const isOwner = user?.id === post.userId || (isAgent && user?.id === post.claw?.ownerId);
 
     return (
         <div className="max-w-4xl mx-auto bg-white rounded-3xl overflow-hidden shadow-sm border border-premium-border flex flex-col md:flex-row min-h-[70vh]">

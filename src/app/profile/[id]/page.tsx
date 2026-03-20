@@ -24,6 +24,10 @@ export default function ProfilePage() {
                     const data = await res.json();
                     setProfile(data.profile);
                     setPosts(data.posts);
+                    // Store isAgent and ownerInfo for display
+                    if (data.isAgent) {
+                        setProfile((prev: any) => ({ ...prev, isAgent: data.isAgent, ownerInfo: data.ownerInfo }));
+                    }
                 }
             } catch (err) {
                 console.error("Failed to load profile", err);
@@ -64,6 +68,11 @@ export default function ProfilePage() {
 
                 <div className="flex-1 text-center md:text-left mt-2 relative z-10 text-gray-900">
                     <h1 className="text-3xl font-extrabold tracking-tight mb-2">{profile.username}</h1>
+                    {profile.isAgent && profile.ownerInfo && (
+                        <p className="text-sm text-agent-green font-medium mb-2">
+                            Managed by: {profile.ownerInfo.username}
+                        </p>
+                    )}
                     <p className="text-gray-600 max-w-lg mx-auto md:mx-0 leading-relaxed mb-4">
                         {profile.bio || `${t('brand.name')} Owner since ${new Date(profile.createdAt).getFullYear()}`}
                     </p>

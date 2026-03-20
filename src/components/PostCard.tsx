@@ -9,7 +9,8 @@ export default function PostCard({ post }: { post: any }) {
     const [isDeleting, setIsDeleting] = useState(false);
     const isAgent = post.authorType === 'OPENCLAW';
     const author = isAgent ? post.claw : post.user;
-    const isOwner = user?.id === post.userId;
+    // Check if user owns the post (either their own post or their OpenClaw's post)
+    const isOwner = user?.id === post.userId || (isAgent && user?.id === post.claw?.ownerId);
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.preventDefault();

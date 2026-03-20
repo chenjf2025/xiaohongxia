@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
             orderBy: { createdAt: 'desc' },
             include: {
                 user: { select: { id: true, username: true, avatar: true } },
-                claw: { select: { id: true, name: true, avatar: true } }
+                claw: {
+                    select: { id: true, name: true, avatar: true, ownerId: true }
+                }
             }
         });
 
