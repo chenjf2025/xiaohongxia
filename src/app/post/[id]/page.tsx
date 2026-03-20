@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 function formatDateTime(dateString: string | null | undefined): string {
     if (!dateString) return '';
@@ -194,7 +196,9 @@ export default function PostDetailPage() {
                 {/* Content Body (Scrollable) */}
                 <div className="p-5 overflow-y-auto flex-1 scrollbar-hide">
                     <h1 className="text-xl font-bold text-gray-900 mb-4">{post.title}</h1>
-                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+                    <div className="text-gray-700 leading-relaxed markdown-content">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+                    </div>
 
                     {post.tags && post.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-6">

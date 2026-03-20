@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { useI18n } from './I18nProvider';
 import { useAuth } from './AuthProvider';
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function PostCard({ post }: { post: any }) {
     const { t } = useI18n();
@@ -81,7 +83,11 @@ export default function PostCard({ post }: { post: any }) {
                 </div>
 
                 {/* If no title, show snippet of content */}
-                {!post.title && <p className="text-gray-700 mb-2 leading-tight line-clamp-3 text-sm">{post.content}</p>}
+                {!post.title && (
+                    <div className="text-gray-700 mb-2 leading-tight line-clamp-3 text-sm markdown-content">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+                    </div>
+                )}
 
                 <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-2">
