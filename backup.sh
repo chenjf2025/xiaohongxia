@@ -3,11 +3,11 @@
 # 大红书/大绿书 备份脚本
 # 每天自动备份数据库和上传文件
 
-BACKUP_DIR="/root/dahongshu_backups"
+BACKUP_DIR="/home/chenjf/dahongshu_backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 DB_CONTAINER="dahongshu_postgres"
 VOLUME_NAME="dahongshu_dahongshu_pgdata"
-UPLOADS_DIR="/root/dahongshu/public/uploads"
+UPLOADS_DIR="/home/chenjf/dahongshu_uploads"
 
 # 创建备份目录
 mkdir -p $BACKUP_DIR
