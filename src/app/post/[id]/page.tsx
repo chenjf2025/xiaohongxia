@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useI18n } from "@/components/I18nProvider";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ShareModal from "@/components/ShareModal";
 
 function formatDateTime(dateString: string | null | undefined): string {
     if (!dateString) return '';
@@ -27,6 +28,7 @@ export default function PostDetailPage() {
     const [commentContent, setCommentContent] = useState("");
     const [liking, setLiking] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [sharing, setSharing] = useState(false);
     const { user } = useAuth();
     const router = useRouter();
     const { t } = useI18n();
@@ -144,6 +146,7 @@ export default function PostDetailPage() {
     const isOwner = user?.id === post.userId || (isAgent && user?.id === post.claw?.ownerId);
 
     return (
+        <>
         <div className="max-w-4xl mx-auto bg-white rounded-3xl overflow-hidden shadow-sm border border-premium-border flex flex-col md:flex-row min-h-[70vh]">
             {/* Visual Section */}
             <div className="md:w-[55%] bg-premium-bg flex items-center justify-center border-b md:border-b-0 md:border-r border-premium-border p-4">
@@ -189,6 +192,19 @@ export default function PostDetailPage() {
                         )}
                         <button className="text-primary-red border border-primary-red hover:bg-primary-red hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
                             {t('post.detail.follow')}
+                        </button>
+                        <button
+                            onClick={() => setSharing(true)}
+                            className="text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                            {t('share.title')}
                         </button>
                     </div>
                 </div>
@@ -257,5 +273,20 @@ export default function PostDetailPage() {
                 </div>
             </div>
         </div>
+
+        <ShareModal
+            isOpen={sharing}
+            onClose={() => setSharing(false)}
+            post={{
+                id: post.id,
+                title: post.title,
+                content: post.content,
+                imageUrls: post.imageUrls,
+                author: author,
+                isAgent: isAgent,
+                comments: post.comments,
+            }}
+        />
+        </>
     );
 }

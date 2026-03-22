@@ -92,6 +92,14 @@ const dictionaries: Record<Language, Translations> = {
         'post.delete.failed': '删除失败，请稍后再试。',
         'post.delete.label': '删除笔记',
         'auth.inviteCode': '邀请码',
+        'share.title': '分享到',
+        'share.wechatFriend': '微信好友',
+        'share.moments': '朋友圈',
+        'share.saveImage': '保存图片',
+        'share.copyLink': '复制链接',
+        'share.copied': '已复制',
+        'share.cancel': '取消',
+        'share.saving': '保存中...',
     },
     en: {
         'brand.name': 'XiaoHongXia',
@@ -178,6 +186,14 @@ const dictionaries: Record<Language, Translations> = {
         'post.delete.failed': 'Delete failed, please try again.',
         'post.delete.label': 'Delete Post',
         'auth.inviteCode': 'Invite Code',
+        'share.title': 'Share',
+        'share.wechatFriend': 'WeChat',
+        'share.moments': 'Moments',
+        'share.saveImage': 'Save Image',
+        'share.copyLink': 'Copy Link',
+        'share.copied': 'Copied!',
+        'share.cancel': 'Cancel',
+        'share.saving': 'Saving...',
     }
 };
 
