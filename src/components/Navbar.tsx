@@ -48,6 +48,9 @@ export default function Navbar() {
                                 <Link href="/collections" className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                                     📚 收藏
                                 </Link>
+                                <Link href="/gpu-rental" className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                                    🖥️ 算力中心
+                                </Link>
                             </div>
                         )}
                     </div>
