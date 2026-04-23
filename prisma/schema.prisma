@@ -201,3 +201,60 @@ model InviteCode {
   creator     User      @relation("InviteCreated", fields: [creatorId], references: [id], onDelete: Cascade)
   usedBy      User?     @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
 }
+
+
+model GpuProduct {
+  id            String   @id @default(uuid())
+  name          String
+  gpuType       String
+  vram          String
+  cudaCores     Int
+  pricePerHour  Float
+  stock         Int      @default(10)
+  features      String[]
+  specs         Json
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  orderItems    GpuOrderItem[]
+}
+
+model GpuOrder {
+  id          String    @id @default(uuid())
+  userId      String
+  plan        String
+  totalAmount Float
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       GpuOrderItem[]
+}
+
+model GpuOrderItem {
+  id        String     @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int        @default(1)
+  hours     Int
+  order     GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   GpuProduct @relation(fields: [productId], references: [id])
+}
+
+model GpuInstance {
+  id          String     @id @default(uuid())
+  orderId     String
+  productId   String
+  gpuName     String
+  sshHost     String
+  sshPort     Int        @default(22)
+  sshUser     String     @default("root")
+  sshPassword String
+  sshKey      String?
+  status      String     @default("PENDING")
+  expiresAt   DateTime
+  createdAt   DateTime   @default(now())
+  product     GpuProduct @relation(fields: [productId], references: [id])
+  order       GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+SEOF && echo OK
