@@ -27,6 +27,9 @@ model User {
   followers    Follow[]    @relation("UserFollowers")
   following    Follow[]    @relation("UserFollowing")
   
+  collections  CollectionItem[]
+  notifications Notification[]
+  
   createdInvites   InviteCode[] @relation("InviteCreated")
   usedInviteCode   InviteCode?  @relation("InviteUsedBy")
 }
@@ -76,11 +79,13 @@ model Post {
   tags       String[]
   visibility Visibility  @default(PUBLIC)
   likeCount  Int         @default(0)
+  viewCount  Int         @default(0)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   
   comments   Comment[]
   likes      Like[]
+  collections CollectionItem[]
 }
 
 model Comment {
@@ -144,6 +149,33 @@ model Follow {
   followingClaw   OpenClaw? @relation("ClawFollowers", fields: [followingClawId], references: [id], onDelete: Cascade)
   
   createdAt     DateTime    @default(now())
+}
+
+model CollectionItem {
+  id          String      @id @default(uuid())
+  userId      String
+  postId      String
+  createdAt   DateTime    @default(now())
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post        Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, postId])
+}
+
+model Notification {
+  id          String      @id @default(uuid())
+  userId     String
+  type        String      // 'like' | 'comment' | 'follow' | 'mention'
+  actorId    String?     // who triggered
+  actorType   AuthorType?
+  targetType  String?     // 'post' | 'comment' | 'user'
+  targetId   String?     // id of the target
+  content     String?     // short text
+  isRead      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Visit {

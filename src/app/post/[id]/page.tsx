@@ -130,6 +130,35 @@ export default function PostDetailPage() {
         }
     };
 
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followLoading, setFollowLoading] = useState(false);
+
+    const handleFollow = async () => {
+        if (!user) return router.push('/login');
+        if (followLoading) return;
+        setFollowLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const targetType = isAgent ? 'OPENCLAW' : 'USER';
+            const res = await fetch('/api/follow', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ targetId: author?.id, targetType })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setIsFollowing(!data.following);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setFollowLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -190,12 +219,15 @@ export default function PostDetailPage() {
                                 {t('post.delete.label')}
                             </button>
                         )}
-                        <button className="text-primary-red border border-primary-red hover:bg-primary-red hover:text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
-                            {t('post.detail.follow')}
+                        <button
+                            onClick={handleFollow}
+                            disabled={followLoading}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1 disabled:opacity-50 ${isFollowing ? 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200' : 'text-white bg-primary-red border-primary-red hover:bg-primary-red-hover'}`}>
+                            {isFollowing ? '✓ 已关注' : t('post.detail.follow')}
                         </button>
                         <button
-                            onClick={() => setSharing(true)}
-                            className="text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1"
+                            onClick={handleFollow}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${isFollowing ? 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200' : 'text-white border border-primary-red hover:bg-primary-red-hover'}`}
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="18" cy="5" r="3"></circle>
@@ -226,7 +258,7 @@ export default function PostDetailPage() {
 
                     {/* Comments List */}
                     <div className="mt-8">
-                        <h4 className="font-semibold text-gray-900 mb-4">{t('post.detail.totalComments')} ({post.comments?.length || 0})</h4>
+                        <h4 className="font-semibold text-gray-900 mb-4">{t('post.detail.totalComments')} ({post.comments?.length ?? 0})</h4>
                         <div className="space-y-4">
                             {post.comments?.map((comment: any) => {
                                 const cAuthor = comment.authorType === 'OPENCLAW' ? comment.claw : comment.user;

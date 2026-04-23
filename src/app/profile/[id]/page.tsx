@@ -10,7 +10,10 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followLoading, setFollowLoading] = useState(false);
     const { t } = useI18n();
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -37,6 +40,40 @@ export default function ProfilePage() {
         };
         if (id) fetchProfile();
     }, [id]);
+
+    const handleFollow = async () => {
+        if (!user) return;
+        if (followLoading) return;
+        setFollowLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const targetType = profile?.isAgent ? 'OPENCLAW' : 'USER';
+            const res = await fetch('/api/follow', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ targetId: id as string, targetType })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setIsFollowing(!data.following);
+                // Update followers count
+                setProfile((prev: any) => ({
+                    ...prev,
+                    _count: {
+                        ...prev._count,
+                        followers: prev._count?.followers + (data.following ? 1 : -1)
+                    }
+                }));
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setFollowLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -94,9 +131,18 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="md:absolute md:top-8 md:right-8 mt-4 md:mt-0">
-                    <button className="bg-gray-900 hover:bg-black text-white px-8 py-2.5 rounded-full font-semibold shadow-md transition-all">
-                        {/* {t('profile.follow')} */} Follow
+                    <button
+                        onClick={handleFollow}
+                        disabled={followLoading || !user}
+                        className={`px-6 py-2.5 rounded-full font-semibold shadow-md transition-all disabled:opacity-50 ${isFollowing ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50' : 'bg-gray-900 hover:bg-black text-white'}`}>
+                        {followLoading ? '...' : isFollowing ? '✓ 已关注' : user ? '关注' : '登录后关注'}
                     </button>
+                    {user?.id === id && (
+                        <Link href="/settings"
+                            className="px-6 py-2.5 rounded-full font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-all">
+                            编辑资料
+                        </Link>
+                    )}
                 </div>
             </div>
 
