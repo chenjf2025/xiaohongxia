@@ -1,207 +1,250 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/components/AuthProvider";
+import { useRouter } from "next/navigation";
+
+interface GpuProduct {
+  id: string; name: string; gpuType: string; vram: string; cudaCores: number;
+  pricePerHour: number; stock: number; features: string[]; specs: any;
+}
+
+const PRICE_TABLE: Record<string, Record<string, number>> = {
+  "Tesla T4 × 1":              { hourly: 8,   weekly: 300,  monthly: 999  },
+  "Tesla T4 × 2 (双卡集群)":   { hourly: 15,  weekly: 560,  monthly: 1899 },
+  "A100 40GB":                 { hourly: 28,  weekly: 980,  monthly: 3200 },
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  hourly: "按小时", weekly: "包周套餐", monthly: "包月套餐"
+};
 
 export default function GPURentalPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    gpu: "",
-    hours: "",
-    message: "",
-  });
-  const [submitted, setSubmitted] = useState(false);
+  const { user } = useAuth();
+  const router = useRouter();
+  const [products, setProducts] = useState<GpuProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<GpuProduct | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState("hourly");
+  const [quantity, setQuantity] = useState(1);
+  const [ordering, setOrdering] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
+  useEffect(() => {
+    fetch("/api/gpu/products")
+      .then(r => r.json())
+      .then(d => { setProducts(d.products || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const getPrice = (productName: string, plan: string) =>
+    PRICE_TABLE[productName]?.[plan] || 0;
+
+  const totalAmount = selectedProduct
+    ? getPrice(selectedProduct.name, selectedPlan) * quantity
+    : 0;
+
+  const handleOrder = async () => {
+    if (!user) { router.push("/login?redirect=/gpu-rental"); return; }
+    if (!selectedProduct) return;
+    setOrdering(true);
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch("/api/gpu/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: selectedPlan, productId: selectedProduct.id, quantity })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "下单失败");
+      // Mock pay
+      const payRes = await fetch(`/api/gpu/orders/${data.orderId}/pay`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const payData = await payRes.json();
+      if (!payRes.ok) throw new Error(payData.error || "支付失败");
+      router.push("/my-computing");
+    } catch (e: any) {
+      alert(e.message);
+      setOrdering(false);
+    }
   };
 
-  const gpus = [
-    {
-      name: "Tesla T4",
-      vram: "16GB GDDR6",
-      cuda: "2560",
-      price: 8,
-      available: true,
-      features: ["Stable Diffusion", "Llama 大模型推理", "模型微调 (LoRA)", "视频渲染", "AI 推理服务"],
-      specs: {
-        "核心频率": "585 MHz",
-        "显存带宽": "320 GB/s",
-        "TDP": "70W",
-        "接口": "PCIe 3.0 x16",
-        "驱动": "CUDA 12.x",
-      },
-    },
-    {
-      name: "Tesla T4",
-      vram: "16GB GDDR6",
-      cuda: "2560",
-      price: 8,
-      available: true,
-      features: ["同规格第二张卡", "可组成集群", "并行计算"],
-      specs: {
-        "核心频率": "585 MHz",
-        "显存带宽": "320 GB/s",
-        "TDP": "70W",
-        "接口": "PCIe 3.0 x16",
-        "驱动": "CUDA 12.x",
-      },
-    },
-  ];
-
   const faqs = [
-    {
-      q: "如何计费？",
-      a: "按小时计费，不满1小时按1小时计算。长期租用（>100小时/月）可享折扣。",
-    },
-    {
-      q: "支持哪些框架？",
-      a: "支持 PyTorch、TensorFlow、JAX、vLLM、Ollama 等所有主流深度学习框架。CUDA 12.x 驱动已预装。",
-    },
-    {
-      q: "数据安全吗？",
-      a: "您的数据仅存储在您指定的目录下，任务结束后可选择删除。所有数据传输使用加密通道。",
-    },
-    {
-      q: "可以并发使用多卡吗？",
-      a: "可以，支持多卡并行调度，适合分布式训练和大批量推理任务。",
-    },
-    {
-      q: "遇到问题怎么办？",
-      a: "提供即时技术支持，可通过微信/邮件联系，我们提供 9:00-22:00 人工响应。",
-    },
+    { q: "如何计费？", a: "按所选套餐计费，包周/包月平均每小时更低。按小时付费最低 ¥8/小时起。" },
+    { q: "支持哪些框架？", a: "支持 PyTorch、TensorFlow、JAX、vLLM、Ollama 等所有主流框架，CUDA 12.x 已预装。" },
+    { q: "数据安全吗？", a: "您的数据仅存储在您指定的目录下，任务结束后可选择删除。所有数据传输使用加密通道。" },
+    { q: "可以退款吗？", a: "未使用的时长可申请退款，请联系客服处理（工作日 24 小时内响应）。" },
+    { q: "遇到问题怎么办？", a: "提供 9:00-22:00 技术支持，可通过微信或工单系统联系我们。" },
   ];
 
   return (
     <div className="max-w-6xl mx-auto">
       {/* Hero */}
-      <div className="text-center py-16">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-red/10 text-primary-red text-sm font-medium mb-6">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-          GPU 算力出租服务
+      <div className="text-center py-12 mb-10">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-red/10 text-primary-red text-sm font-medium mb-4">
+          🖥️ GPU 算力出租
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-premium-text mb-4">
-          专业 GPU 算力
-          <span className="text-primary-red"> 按需租用</span>
+        <h1 className="text-3xl md:text-4xl font-bold text-premium-text mb-3">
+          专业 GPU 算力 <span className="text-primary-red">按需租用</span>
         </h1>
-        <p className="text-xl text-premium-text-muted max-w-2xl mx-auto mb-8">
-          基于 Tesla T4 16GB 显卡，灵活计费，即开即用<br />
+        <p className="text-premium-text-muted max-w-xl mx-auto">
+          Tesla T4 / A100 显卡，分钟级开通，即开即用<br/>
           支持大模型推理、Stable Diffusion、模型训练与微调
         </p>
-        <div className="flex justify-center gap-4">
-          <a href="#pricing" className="px-8 py-3 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-hover transition-colors">
-            查看价格
+        {user && (
+          <a href="/my-computing" className="inline-flex items-center gap-2 mt-4 px-5 py-2 bg-agent-green/10 text-agent-green rounded-full text-sm font-medium hover:bg-agent-green/20 transition-colors">
+            🎮 我的算力 → 查看我的实例
           </a>
-          <a href="#contact" className="px-8 py-3 border-2 border-primary-red text-primary-red font-semibold rounded-lg hover:bg-primary-red hover:text-white transition-colors">
-            立即咨询
-          </a>
-        </div>
+        )}
       </div>
 
-      {/* GPU Cards */}
-      <div className="grid md:grid-cols-2 gap-6 mb-16" id="gpus">
-        {gpus.map((gpu, i) => (
-          <div key={i} className="bg-premium-card rounded-xl border border-premium-border overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
+      {/* Main content: products + order form */}
+      <div className="grid lg:grid-cols-5 gap-6 mb-12">
+        {/* Product list */}
+        <div className="lg:col-span-3 space-y-4">
+          <h2 className="text-lg font-bold text-premium-text mb-4">选择 GPU 规格</h2>
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-primary-red border-t-transparent rounded-full"/>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="bg-premium-card border border-premium-border rounded-xl p-8 text-center">
+              <p className="text-premium-text-muted">暂无产品，请联系客服开通</p>
+            </div>
+          ) : products.map(p => (
+            <div key={p.id}
+              className={`bg-premium-card border-2 rounded-xl p-5 cursor-pointer transition-all hover:shadow-md ${selectedProduct?.id === p.id ? "border-primary-red shadow-md" : "border-premium-border"}`}
+              onClick={() => setSelectedProduct(p)}
+            >
+              <div className="flex justify-between items-start mb-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-2xl font-bold text-premium-text">{gpu.name}</h3>
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-agent-green/10 text-agent-green">
-                      可用
+                    <span className="text-xl font-bold text-premium-text">{p.name}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${p.stock > 3 ? "bg-agent-green/10 text-agent-green" : "bg-yellow-100 text-yellow-700"}`}>
+                      {p.stock > 3 ? "充足" : `仅剩 ${p.stock}`}
                     </span>
                   </div>
-                  <p className="text-premium-text-muted">{gpu.vram} · CUDA {gpu.cuda} 核心</p>
+                  <p className="text-sm text-premium-text-muted">{p.vram} · {p.cudaCores} CUDA 核心</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-primary-red">¥{gpu.price}</div>
-                  <div className="text-sm text-premium-text-muted">/ 小时</div>
+                  <div className="text-2xl font-bold text-primary-red">¥{p.pricePerHour}</div>
+                  <div className="text-xs text-premium-text-muted">/ 小时</div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {Object.entries(gpu.specs).map(([k, v]) => (
-                  <div key={k} className="bg-premium-bg rounded-lg px-3 py-2">
+              <div className="grid grid-cols-5 gap-2 mb-3">
+                {Object.entries(p.specs || {}).map(([k, v]) => (
+                  <div key={k} className="bg-premium-bg rounded px-2 py-1 text-center">
                     <div className="text-xs text-premium-text-muted">{k}</div>
-                    <div className="text-sm font-semibold text-premium-text">{v}</div>
+                    <div className="text-xs font-semibold text-premium-text truncate">{String(v)}</div>
                   </div>
                 ))}
               </div>
-
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-premium-text">适用场景：</p>
-                <div className="flex flex-wrap gap-2">
-                  {gpu.features.map((f) => (
-                    <span key={f} className="px-2.5 py-1 rounded-full bg-premium-bg text-sm text-premium-text-muted border border-premium-border">
-                      {f}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(p.features || []).map(f => (
+                  <span key={f} className="px-2 py-0.5 rounded-full bg-premium-bg text-xs text-premium-text-muted border border-premium-border">{f}</span>
+                ))}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Pricing */}
-      <div className="bg-premium-card rounded-xl border border-premium-border p-8 mb-16" id="pricing">
-        <h2 className="text-2xl font-bold text-premium-text mb-6 text-center">价格方案</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="border border-premium-border rounded-xl p-6">
-            <h3 className="text-lg font-bold text-premium-text mb-2">按需计费</h3>
-            <div className="text-3xl font-bold text-primary-red mb-1">¥8<span className="text-base font-normal text-premium-text-muted">/小时/卡</span></div>
-            <p className="text-sm text-premium-text-muted mb-4">无最低消费，灵活使用</p>
-            <ul className="space-y-2 text-sm text-premium-text">
-              <li className="flex items-center gap-2">✓ Tesla T4 16GB</li>
-              <li className="flex items-center gap-2">✓ CUDA 环境已配置</li>
-              <li className="flex items-center gap-2">✓ 技术支持</li>
-            </ul>
-          </div>
-          <div className="border-2 border-primary-red rounded-xl p-6 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary-red text-white text-xs font-bold rounded-full">推荐</div>
-            <h3 className="text-lg font-bold text-premium-text mb-2">包周套餐</h3>
-            <div className="text-3xl font-bold text-primary-red mb-1">¥300<span className="text-base font-normal text-premium-text-muted">/周/卡</span></div>
-            <p className="text-sm text-premium-text-muted mb-4">平均 ¥6/小时，省 25%</p>
-            <ul className="space-y-2 text-sm text-premium-text">
-              <li className="flex items-center gap-2">✓ 7×24 不限时使用</li>
-              <li className="flex items-center gap-2">✓ 优先调度</li>
-              <li className="flex items-center gap-2">✓ 优先技术支持</li>
-            </ul>
-          </div>
-          <div className="border border-premium-border rounded-xl p-6">
-            <h3 className="text-lg font-bold text-premium-text mb-2">包月套餐</h3>
-            <div className="text-3xl font-bold text-primary-red mb-1">¥999<span className="text-base font-normal text-premium-text-muted">/月/卡</span></div>
-            <p className="text-sm text-premium-text-muted mb-4">平均 ¥5/小时，省 37%</p>
-            <ul className="space-y-2 text-sm text-premium-text">
-              <li className="flex items-center gap-2">✓ 30×24 不限时使用</li>
-              <li className="flex items-center gap-2">✓ 专属 GPU 队列</li>
-              <li className="flex items-center gap-2">✓ 7×12 专属支持</li>
-            </ul>
+        {/* Order panel */}
+        <div className="lg:col-span-2">
+          <div className="bg-premium-card border border-premium-border rounded-xl p-6 sticky top-20">
+            <h3 className="text-lg font-bold text-premium-text mb-4">📋 订单确认</h3>
+
+            {!user ? (
+              <div className="text-center py-6">
+                <p className="text-premium-text-muted mb-3">请先登录后再下单</p>
+                <button onClick={() => router.push("/login?redirect=/gpu-rental")}
+                  className="w-full py-2.5 bg-primary-red text-white rounded-lg font-medium hover:bg-primary-red-hover transition-colors">
+                  登录 / 注册
+                </button>
+              </div>
+            ) : !selectedProduct ? (
+              <div className="text-center py-6">
+                <p className="text-premium-text-muted">👈 请先选择一个 GPU 规格</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-premium-bg rounded-lg p-3">
+                  <div className="text-sm text-premium-text-muted mb-1">已选产品</div>
+                  <div className="font-bold text-premium-text">{selectedProduct.name}</div>
+                  <div className="text-sm text-premium-text-muted">{selectedProduct.vram}</div>
+                </div>
+
+                {/* Plan selector */}
+                <div>
+                  <label className="text-sm font-medium text-premium-text mb-2 block">选择套餐</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["hourly", "weekly", "monthly"] as const).map(key => {
+                      const price = getPrice(selectedProduct.name, key);
+                      return (
+                        <button key={key}
+                          onClick={() => setSelectedPlan(key)}
+                          className={`py-2 rounded-lg text-sm font-medium border-2 transition-all ${selectedPlan === key ? "border-primary-red bg-primary-red/5 text-primary-red" : "border-premium-border text-premium-text-muted hover:border-gray-300"}`}
+                        >
+                          <div>{PLAN_LABELS[key]}</div>
+                          <div className="font-bold text-xs">¥{price}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label className="text-sm font-medium text-premium-text mb-2 block">购买数量（卡）</label>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-9 h-9 rounded-lg border border-premium-border flex items-center justify-center text-premium-text hover:bg-premium-bg">−</button>
+                    <span className="font-bold text-lg w-8 text-center">{quantity}</span>
+                    <button onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))}
+                      className="w-9 h-9 rounded-lg border border-premium-border flex items-center justify-center text-premium-text hover:bg-premium-bg">+</button>
+                    <span className="text-sm text-premium-text-muted ml-2">共 {quantity} 卡</span>
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="border-t border-premium-border pt-4">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-premium-text-muted">套餐价格</span>
+                    <span className="text-premium-text">¥{getPrice(selectedProduct.name, selectedPlan)} × {quantity}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-premium-text">应付总额</span>
+                    <span className="text-2xl font-bold text-primary-red">¥{totalAmount}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleOrder}
+                  disabled={ordering}
+                  className="w-full py-3 bg-primary-red text-white rounded-lg font-bold hover:bg-primary-red-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  {ordering ? "处理中..." : "立即下单（演示模式）"}
+                </button>
+                <p className="text-xs text-premium-text-muted text-center">点击后自动开通 GPU 实例并跳转控制台</p>
+              </div>
+            )}
           </div>
         </div>
-        <p className="text-center text-sm text-premium-text-muted mt-4">
-          企业/大批量使用另有优惠，请联系详谈
-        </p>
       </div>
 
-      {/* How to use */}
-      <div className="mb-16">
-        <h2 className="text-2xl font-bold text-premium-text mb-8 text-center">如何租用</h2>
+      {/* How it works */}
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold text-premium-text mb-6 text-center">使用流程</h2>
         <div className="grid md:grid-cols-4 gap-4">
           {[
-            { step: "01", title: "提交申请", desc: "填写表单或微信联系，说明您的使用需求（模型类型、预计时长、是否需要并发）" },
-            { step: "02", title: "账户充值", desc: "确认价格后，通过微信/支付宝预充值，我们开通对应时长" },
-            { step: "03", title: "连接 GPU", desc: "获得 SSH 访问凭证，连接 GPU 服务器，开始使用" },
-            { step: "04", title: "使用 & 结算", desc: "按实际使用时长结算，超出预付时长自动暂停，透明计费" },
-          ].map((item) => (
+            { step: "01", title: "选择规格", desc: "选择 GPU 类型和套餐，立即下单" },
+            { step: "02", title: "自动开通", desc: "支付成功后，GPU 实例分钟级自动开通" },
+            { step: "03", title: "连接使用", desc: "获得 SSH 凭证，连接 GPU 开始计算" },
+            { step: "04", title: "到期释放", desc: "到期后实例自动停止，数据保留 7 天" },
+          ].map(item => (
             <div key={item.step} className="bg-premium-card border border-premium-border rounded-xl p-5 text-center">
-              <div className="w-12 h-12 bg-primary-red/10 text-primary-red rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">
-                {item.step}
-              </div>
-              <h3 className="font-bold text-premium-text mb-2">{item.title}</h3>
+              <div className="w-10 h-10 bg-primary-red/10 text-primary-red rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-3">{item.step}</div>
+              <h3 className="font-bold text-premium-text mb-1">{item.title}</h3>
               <p className="text-sm text-premium-text-muted">{item.desc}</p>
             </div>
           ))}
@@ -209,137 +252,18 @@ export default function GPURentalPage() {
       </div>
 
       {/* FAQ */}
-      <div className="mb-16">
-        <h2 className="text-2xl font-bold text-premium-text mb-8 text-center">常见问题</h2>
-        <div className="space-y-3">
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold text-premium-text mb-6 text-center">常见问题</h2>
+        <div className="space-y-2">
           {faqs.map((faq, i) => (
             <details key={i} className="bg-premium-card border border-premium-border rounded-lg group">
               <summary className="px-6 py-4 cursor-pointer font-semibold text-premium-text hover:text-primary-red list-none flex justify-between items-center">
                 {faq.q}
-                <span className="text-premium-text-muted group-open:rotate-45 transition-transform">+</span>
+                <span className="text-premium-text-muted group-open:rotate-45 transition-transform font-bold">+</span>
               </summary>
-              <div className="px-6 pb-4 text-premium-text-muted text-sm leading-relaxed border-t border-premium-border pt-3">
-                {faq.a}
-              </div>
+              <div className="px-6 pb-4 text-premium-text-muted text-sm leading-relaxed border-t border-premium-border pt-3">{faq.a}</div>
             </details>
           ))}
-        </div>
-      </div>
-
-      {/* Contact Form */}
-      <div className="bg-premium-card rounded-xl border border-premium-border p-8" id="contact">
-        <h2 className="text-2xl font-bold text-premium-text mb-2 text-center">立即咨询 / 预约试用</h2>
-        <p className="text-premium-text-muted text-center mb-8">填写以下信息，我们会尽快与您联系（通常 2 小时内）</p>
-
-        {submitted ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-agent-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-agent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-premium-text mb-2">提交成功！</h3>
-            <p className="text-premium-text-muted mb-4">
-              您的咨询信息已收到，我们会在 <strong>2 小时内</strong>通过邮件或微信与您联系。
-            </p>
-            <button onClick={() => setSubmitted(false)} className="text-primary-red underline text-sm">
-              继续填写
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-premium-text mb-1">您的姓名 *</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-2.5 border border-premium-border rounded-lg bg-premium-bg focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:border-primary-red transition-colors"
-                  placeholder="张三"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-premium-text mb-1">邮箱 *</label>
-                <input
-                  type="email"
-                  required
-                  className="w-full px-4 py-2.5 border border-premium-border rounded-lg bg-premium-bg focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:border-primary-red transition-colors"
-                  placeholder="zhangsan@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-premium-text mb-1">需要的 GPU</label>
-                <select
-                  className="w-full px-4 py-2.5 border border-premium-border rounded-lg bg-premium-bg focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:border-primary-red transition-colors"
-                  value={formData.gpu}
-                  onChange={(e) => setFormData({ ...formData, gpu: e.target.value })}
-                >
-                  <option value="">选择 GPU 类型</option>
-                  <option value="t4-1">Tesla T4 × 1</option>
-                  <option value="t4-2">Tesla T4 × 2</option>
-                  <option value="t4-cluster">Tesla T4 集群（多卡）</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-premium-text mb-1">预计使用时长</label>
-                <select
-                  className="w-full px-4 py-2.5 border border-premium-border rounded-lg bg-premium-bg focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:border-primary-red transition-colors"
-                  value={formData.hours}
-                  onChange={(e) => setFormData({ ...formData, hours: e.target.value })}
-                >
-                  <option value="">选择时长</option>
-                  <option value="1-10">1-10 小时（试用）</option>
-                  <option value="10-50">10-50 小时</option>
-                  <option value="50-200">50-200 小时</option>
-                  <option value="200+">200+ 小时（企业级）</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-premium-text mb-1">使用场景 / 需求描述</label>
-              <textarea
-                rows={4}
-                className="w-full px-4 py-2.5 border border-premium-border rounded-lg bg-premium-bg focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:border-primary-red transition-colors resize-none"
-                placeholder="请描述您的使用场景，例如：运行 Stable Diffusion XL 生成图片、部署 Llama3-8B 推理服务等"
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              />
-            </div>
-            <div className="text-center pt-2">
-              <button
-                type="submit"
-                className="px-10 py-3 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-hover transition-colors shadow-sm"
-              >
-                提交咨询
-              </button>
-              <p className="text-xs text-premium-text-muted mt-2">
-                提交即表示同意我们的服务条款
-              </p>
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* WeChat CTA */}
-      <div className="mt-8 bg-gradient-to-r from-primary-red/5 to-red-700/5 rounded-xl border border-primary-red/20 p-8 text-center">
-        <h3 className="text-xl font-bold text-premium-text mb-2">微信快速联系</h3>
-        <p className="text-premium-text-muted mb-4">扫码添加微信，实时沟通算力需求</p>
-        <div className="inline-flex items-center gap-3 bg-white rounded-lg border border-premium-border px-6 py-3">
-          <div className="w-10 h-10 bg-agent-green/10 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-agent-green" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348z"/>
-            </svg>
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-semibold text-premium-text">客服微信</p>
-            <p className="text-xs text-premium-text-muted">工作时间 9:00-22:00</p>
-          </div>
         </div>
       </div>
     </div>
