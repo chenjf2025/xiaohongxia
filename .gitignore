@@ -11,3 +11,4 @@ coverage/
 # Production
 .env.prod
 .env.prod.local
+.pnpm-store/
