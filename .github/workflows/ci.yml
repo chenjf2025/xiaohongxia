@@ -1,23 +1,24 @@
-name: CI/CD - 构建与部署
+name: CI/CD - 构建与测试
 
 on:
   push:
     branches:
       - dev
       - main
-  workflow_dispatch:
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/xiaohongxia
+  pull_request:
+    branches:
+      - dev
+      - main
 
 jobs:
-  lint:
-    name: 代码检查
+  lint-and-build:
+    name: 代码检查 + 构建
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -36,59 +37,24 @@ jobs:
       - name: TypeScript 类型检查
         run: pnpm tsc --noEmit || true
 
-  build:
-    name: 构建并推送镜像
-    runs-on: ubuntu-latest
-    needs: lint
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - name: Prisma Schema 验证
+        run: pnpm exec prisma validate
 
-      - name: 设置 QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: 设置 Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 登录 GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 提取元信息
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: 构建并推送镜像
+      - name: 构建 Docker 镜像（验证 Dockerfile.prod）
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.prod
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
+          platforms: linux/amd64
+          load: true
+          tags: xiaohongxia:ci-test
+          args: |
             GIT_SHA=${{ github.sha }}
 
-      - name: 部署通知
+      - name: 构建成功通知
         run: |
-          echo "✅ Docker 镜像已构建并推送"
-          echo "镜像: ${{ steps.meta.outputs.tags }}"
-          echo ""
-          echo "📋 服务器将在下一分钟自动拉取并部署"
+          echo "✅ 构建验证通过"
           echo "SHA: ${{ github.sha }}"
           echo "分支: ${{ github.ref_name }}"
-          echo "时间: $(date)"
+          echo ""
+          echo "📋 服务器将在下一分钟自动通过 git clone 拉取并部署"
