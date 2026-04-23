@@ -29,6 +29,7 @@ model User {
   
   collections  CollectionItem[]
   notifications Notification[]
+  gpuOrders     GpuOrder[]
   
   createdInvites   InviteCode[] @relation("InviteCreated")
   usedInviteCode   InviteCode?  @relation("InviteUsedBy")
@@ -216,6 +217,7 @@ model GpuProduct {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   orderItems    GpuOrderItem[]
+  gpuInstances  GpuInstance[]
 }
 
 model GpuOrder {
@@ -227,7 +229,8 @@ model GpuOrder {
   createdAt   DateTime  @default(now())
   paidAt      DateTime?
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items       GpuOrderItem[]
+  gpuOrderItems GpuOrderItem[]
+  gpuInstances  GpuInstance[]
 }
 
 model GpuOrderItem {
@@ -236,134 +239,23 @@ model GpuOrderItem {
   productId String
   quantity  Int        @default(1)
   hours     Int
-  order     GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   GpuProduct @relation(fields: [productId], references: [id])
+  gpuOrder  GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  gpuProduct GpuProduct @relation(fields: [productId], references: [id])
 }
 
 model GpuInstance {
-  id          String     @id @default(uuid())
-  orderId     String
-  productId   String
-  gpuName     String
-  sshHost     String
-  sshPort     Int        @default(22)
-  sshUser     String     @default("root")
-  sshPassword String
-  sshKey      String?
-  status      String     @default("PENDING")
-  expiresAt   DateTime
-  createdAt   DateTime   @default(now())
-  product     GpuProduct @relation(fields: [productId], references: [id])
-  order       GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-}
-
-SEOF && echo OK
-
-model GpuProduct {
-  id            String   @id @default(uuid())
-  name          String
-  gpuType       String
-  vram          String
-  cudaCores     Int
-  pricePerHour  Float
-  stock         Int      @default(10)
-  features      String[]
-  specs         Json
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  orderItems    GpuOrderItem[]
-}
-
-model GpuOrder {
-  id          String    @id @default(uuid())
-  userId      String
-  plan        String
-  totalAmount Float
-  status      String    @default("PENDING")
-  createdAt   DateTime  @default(now())
-  paidAt      DateTime?
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items       GpuOrderItem[]
-}
-
-model GpuOrderItem {
-  id        String     @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int        @default(1)
-  hours     Int
-  order     GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   GpuProduct @relation(fields: [productId], references: [id])
-}
-
-model GpuInstance {
-  id          String     @id @default(uuid())
-  orderId     String
-  productId   String
-  gpuName     String
-  sshHost     String
-  sshPort     Int        @default(22)
-  sshUser     String     @default("root")
-  sshPassword String
-  sshKey      String?
-  status      String     @default("PENDING")
-  expiresAt   DateTime
-  createdAt   DateTime   @default(now())
-  product     GpuProduct @relation(fields: [productId], references: [id])
-  order       GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-}
-
-
-model GpuProduct {
-  id            String   @id @default(uuid())
-  name          String
-  gpuType       String
-  vram          String
-  cudaCores     Int
-  pricePerHour  Float
-  stock         Int      @default(10)
-  features      String[]
-  specs         Json
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  orderItems    GpuOrderItem[]
-}
-
-model GpuOrder {
-  id          String    @id @default(uuid())
-  userId      String
-  plan        String
-  totalAmount Float
-  status      String    @default("PENDING")
-  createdAt   DateTime  @default(now())
-  paidAt      DateTime?
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items       GpuOrderItem[]
-}
-
-model GpuOrderItem {
-  id        String     @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int        @default(1)
-  hours     Int
-  order     GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   GpuProduct @relation(fields: [productId], references: [id])
-}
-
-model GpuInstance {
-  id          String     @id @default(uuid())
-  orderId     String
-  productId   String
-  gpuName     String
-  sshHost     String
-  sshPort     Int        @default(22)
-  sshUser     String     @default("root")
-  sshPassword String
-  sshKey      String?
-  status      String     @default("PENDING")
-  expiresAt   DateTime
-  createdAt   DateTime   @default(now())
-  product     GpuProduct @relation(fields: [productId], references: [id])
-  order       GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  orderId      String
+  productId    String
+  gpuName      String
+  sshHost      String
+  sshPort      Int        @default(22)
+  sshUser      String     @default("root")
+  sshPassword  String
+  sshKey       String?
+  status       String     @default("PENDING")
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+  gpuProduct   GpuProduct @relation(fields: [productId], references: [id])
+  gpuOrder     GpuOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

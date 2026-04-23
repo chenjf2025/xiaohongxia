@@ -2,35 +2,33 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    curl openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pnpm globally
 RUN npm install -g pnpm --registry https://registry.npmmirror.com
 
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm config set registry https://registry.npmmirror.com \
     && pnpm install --frozen-lockfile
 
-# Copy prisma schema
 COPY prisma/ ./prisma/
+COPY tsconfig.json ./
+COPY next.config.ts ./
+COPY postcss.config.mjs ./
+COPY eslint.config.mjs ./
+COPY src/ ./src/
+COPY public/ ./public/
+COPY server.mjs ./
 
-# Generate Prisma Client
+# Generate Prisma Client with the actual schema (GPU models)
 RUN pnpm exec prisma generate
 
-# Copy source
-COPY . .
-
-# Build
 ENV NODE_ENV=production
 RUN pnpm build
 
-# Expose port
 EXPOSE 3100
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3100/ || exit 1
 

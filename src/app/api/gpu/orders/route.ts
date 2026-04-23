@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const orders = await prisma.gpuOrder.findMany({
       where: { userId: user.id },
-      include: { items: { include: { product: true } } },
+      include: { gpuOrderItems: { include: { gpuProduct: true } } },
       orderBy: { createdAt: "desc" }
     });
     return NextResponse.json({ orders });
@@ -32,8 +32,13 @@ export async function POST(req: NextRequest) {
     const hours = hoursMap[plan] || 1;
     const order = await prisma.gpuOrder.create({
       data: {
-        userId: user.id, plan, totalAmount, status: "PENDING",
-        items: { create: { productId, quantity, hours } }
+        userId: user.id,
+        plan,
+        totalAmount,
+        status: "PENDING",
+        gpuOrderItems: {
+          create: { productId, quantity, hours }
+        }
       }
     });
     return NextResponse.json({ orderId: order.id, amount: totalAmount });

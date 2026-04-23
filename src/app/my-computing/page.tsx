@@ -8,7 +8,7 @@ interface Instance {
   id: string; gpuName: string; sshHost: string; sshPort: number;
   sshUser: string; sshPassword: string; status: string;
   expiresAt: string; createdAt: string;
-  product: { vram: string; cudaCores: number; specs: any };
+  product: { name: string; vram: string; cudaCores: number; specs?: any };
   order: { plan: string };
 }
 
