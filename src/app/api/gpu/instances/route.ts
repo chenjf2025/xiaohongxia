@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       status: r.status,
       expiresAt: r.expiresAt.toISOString(),
       createdAt: r.createdAt.toISOString(),
-      product: { name: r.product_name, vram: r.product_vram, cudaCores: r.cudaCores },
+      product: { name: r.product_name, vram: r.product_vram, cudaCores: r.product_cudaCores },
       order: { plan: r.plan }
     }));
 
