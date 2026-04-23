@@ -43,7 +43,7 @@ docker rm dahongshu_app 2>/dev/null || true
 
 # 启动新容器
 echo "[6/7] 启动新容器..."
-docker run -d     --name dahongshu_app     --restart unless-stopped     -p 3100:3100     --network docker_default     -e DATABASE_URL="${DATABASE_URL}"     -e REDIS_URL="${REDIS_URL:-redis://docker-redis-1:6379}"     -e JWT_SECRET="${JWT_SECRET}"     -e NODE_ENV=production     -v /home/chenjf/dahongshu_uploads:/app/public/uploads     xiaohongxia:latest
+docker run -d     --name dahongshu_app     --restart unless-stopped     -p 3100:3100     --network ai-platform     -e DATABASE_URL="${DATABASE_URL}"     -e REDIS_URL="${REDIS_URL:-redis://docker-redis-1:6379}"     -e JWT_SECRET="${JWT_SECRET}"     -e NODE_ENV=production     -v /home/chenjf/dahongshu_uploads:/app/public/uploads     xiaohongxia:latest
 
 # 健康检查
 echo "[7/7] 健康检查..."

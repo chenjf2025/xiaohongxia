@@ -17,9 +17,9 @@ services:
     volumes:
       - /home/chenjf/dahongshu_uploads:/app/public/uploads
     networks:
-      - docker_default
+      - ai-platform
 
 networks:
-  docker_default:
+  ai-platform:
     external: true
-    name: docker_default
+    name: ai-platform
