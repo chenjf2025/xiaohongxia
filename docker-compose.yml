@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: dahongshu_app
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - /home/dahongshu_uploads:/app/public/uploads
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: dahongshu_postgres
+    restart: unless-stopped
+    env_file:
+      - .pgenv
+    ports:
+      - "5433:5432"
+    volumes:
+      - dahongshu_dahongshu_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dahongshu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dahongshu_dahongshu_pgdata:

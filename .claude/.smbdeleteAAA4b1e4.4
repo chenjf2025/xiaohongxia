@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la *.yml *.yaml *.conf *.sh 2>/dev/null || true)",
+      "Bash(rsync -avz --exclude node_modules --exclude .next --exclude .git \\\\\n  -e 'sshpass -p \"chenjf8018\" ssh -o StrictHostKeyChecking=no' \\\\\n  /Volumes/MacBook/MassiveCN/dahongshu/ \\\\\n  chenjf@192.168.71.127:/home/chenjf/dahongshu/)"
+    ]
+  }
+}

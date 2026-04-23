@@ -1,0 +1,4 @@
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=Chenjf&8018
+POSTGRES_DB=dahongshu
+TZ=Asia/Shanghai
