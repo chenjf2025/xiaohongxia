@@ -7,3 +7,7 @@ node_modules/
 dist/
 out/
 coverage/
+
+# Production
+.env.prod
+.env.prod.local

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  xiaohongxia:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: dahongshu_app
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@docker-db_postgres-1:5432/dahongshu?schema=public
+      - REDIS_URL=redis://docker-redis-1:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+    volumes:
+      - /home/chenjf/dahongshu_uploads:/app/public/uploads
+    networks:
+      - docker_default
+
+networks:
+  docker_default:
+    external: true
+    name: docker_default
