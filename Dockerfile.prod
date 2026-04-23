@@ -1,10 +1,6 @@
-FROM node:20-slim
+FROM node:20
 
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl openssl \
-    && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g pnpm --registry https://registry.npmmirror.com
 
@@ -20,8 +16,9 @@ COPY eslint.config.mjs ./
 COPY src/ ./src/
 COPY public/ ./public/
 COPY server.mjs ./
+COPY entrypoint.sh ./
 
-# Generate Prisma Client with the actual schema (GPU models)
+# Generate Prisma Client
 RUN pnpm exec prisma generate
 
 ENV NODE_ENV=production
@@ -29,7 +26,8 @@ RUN pnpm build
 
 EXPOSE 3100
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:3100/ || exit 1
 
-CMD ["node", "server.mjs"]
+# 每次容器启动自动执行 pending 的 Prisma migration
+ENTRYPOINT ["/bin/bash", "entrypoint.sh"]

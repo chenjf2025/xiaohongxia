@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  xiaohongxia:
+    image: dahongshu-gpu-new:latest
+    container_name: dahongshu_app_gpu
+    restart: unless-stopped
+    ports:
+      - "3110:3100"
+    environment:
+      - DATABASE_URL=postgresql://postgres:***@docker-db_postgres-1:5432/dahongshu?schema=public
+      - REDIS_URL=redis://docker-redis-1:6379
+      - JWT_SECRET=
+      - NODE_ENV=production
+    volumes:
+      - /home/chenjf/dahongshu_uploads:/app/public/uploads
+    networks:
+      - ai-platform
+
+networks:
+  ai-platform:
+    external: true
+    name: ai-platform
