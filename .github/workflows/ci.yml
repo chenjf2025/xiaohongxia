@@ -71,7 +71,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable=\{\{is_default_branch\}\}
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: 构建镜像
         uses: docker/build-push-action@v5
@@ -102,35 +102,20 @@ jobs:
           timeout: 30m
           script: |
             set -e
-            echo === 小红虾 CI/CD 部署开始 ===
-            echo 镜像: $IMAGE_TAG
-
-            echo [1/6] 登录 GHCR...
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            echo [2/6] 拉取镜像...
-            docker pull $IMAGE_TAG
-
-            echo [3/6] 停止旧容器...
+            echo "=== 小红虾 CI/CD 部署 ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull "$IMAGE_TAG"
             docker stop dahongshu_app || true
             docker rm dahongshu_app || true
-
-            echo [4/6] 启动新容器...
-            docker run -d               --name dahongshu_app               --restart unless-stopped               -p 3100:3100               --network docker_default               -e DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@docker-db_postgres-1:5432/dahongshu?schema=public               -e JWT_SECRET=${JWT_SECRET}               -e NODE_ENV=production               -v /home/chenjf/dahongshu_uploads:/app/public/uploads               --label app=xiaohongxia               --label commit=${{ github.sha }}               $IMAGE_TAG
-
-            echo [5/6] 健康检查...
+            docker run -d               --name dahongshu_app               --restart unless-stopped               -p 3100:3100               --network docker_default               -e DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@docker-db_postgres-1:5432/dahongshu?schema=public"               -e JWT_SECRET="${JWT_SECRET}"               -e NODE_ENV=production               -v /home/chenjf/dahongshu_uploads:/app/public/uploads               --label "app=xiaohongxia"               --label "commit=${{ github.sha }}"               "$IMAGE_TAG"
             sleep 15
-            HTTP_CODE=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:3100/ || echo 000)
-            if [ $HTTP_CODE = 200 ]; then
-              echo ✅ 部署成功! HTTP $HTTP_CODE
+            HTTP_CODE=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:3100/ || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ 部署成功! HTTP $HTTP_CODE"
             else
-              echo ❌ 健康检查失败 HTTP $HTTP_CODE
+              echo "❌ 健康检查失败 HTTP $HTTP_CODE"
               docker logs dahongshu_app --tail 20
               exit 1
             fi
-
-            echo [6/6] 清理旧镜像...
             docker image prune -f
-
-            echo 
-            echo === ✅ 部署完成 ===
+            echo "=== ✅ 部署完成 ==="
